@@ -43,6 +43,7 @@ function App(): React.JSX.Element {
     setText(inputText);
   };
 
+  // Subscribe to the relay
   socket.onopen = () => {
     console.log('connected to ' + relay);
     setMessages([]);
@@ -57,21 +58,21 @@ function App(): React.JSX.Element {
 
   // Log any messages the relay sends you
   socket.onmessage = async (message) => {
-    console.log('receiving messages', message);
+    console.log('receiving message:', message);
     const [type, subId, event] = JSON.parse(message.data);
-    const { kind, content } = event || {};
+    const { kind, content, id } = event || {};
     if (!event || event === true) return;
 
     // if (kind === 4) {
     //   content = await decrypt(privKey, event.pubkey, content);
     // }
 
-    setMessages([...messages, { id: messages.length, text: content }]);
+    setMessages([...messages, { id, text: content }]);
     // window.scrollTo(0, document.body.scrollHeight);
   };
 
   const onPressSend = async () => {
-    // Implement send functionality here
+    // Send message to the relay
     console.log('Sending message:', text);
 
     const event = {
