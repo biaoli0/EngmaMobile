@@ -3,8 +3,8 @@ import { sha256 } from '@noble/hashes/sha256';
 import { hmac } from '@noble/hashes/hmac';
 import { schnorr } from '@noble/curves/secp256k1';
 secp.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp.etc.concatBytes(...m));
-import { bytesToHex } from './hex';
 import { Event, SignedEvent } from '../types';
+import { bytesToHex } from '@noble/hashes/utils';
 
 export async function getSignedEvent(event: Event, privateKey: string): Promise<SignedEvent> {
   const eventData = JSON.stringify([

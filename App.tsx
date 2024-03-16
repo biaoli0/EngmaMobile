@@ -30,10 +30,9 @@ import {
 } from 'react-native';
 
 import Messages from './src/Messages';
-import { bytesToHex } from './src/utils/hex';
 import { privKey, getPubKey } from './src/constants';
 import { getSignedEvent } from './src/utils/getSignedEvent';
-import { Input } from '@noble/hashes/utils';
+import { Input, bytesToHex } from '@noble/hashes/utils';
 import { Message } from './src/types';
 
 const relay = 'wss://relay.damus.io';
