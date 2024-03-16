@@ -39,10 +39,6 @@ function App(): React.JSX.Element {
   const [messages, setMessages] = React.useState([]);
   const [text, setText] = React.useState('');
 
-  const onChangeText = (inputText: string) => {
-    setText(inputText);
-  };
-
   // Subscribe to the relay
   socket.onopen = () => {
     console.log('connected to ' + relay);
@@ -103,7 +99,9 @@ function App(): React.JSX.Element {
           style={styles.input}
           placeholder="Type your message..."
           onSubmitEditing={() => Keyboard.dismiss()} // Dismiss keyboard when submitted
-          onChangeText={onChangeText}
+          onChangeText={(inputText: string) => {
+            setText(inputText);
+          }}
           value={text}
         />
         <TouchableOpacity style={styles.button} onPress={onPressSend}>
