@@ -1,10 +1,6 @@
 import React from 'react';
-import { View, FlatList, Text, StyleSheet, Dimensions } from 'react-native';
-
-interface Message {
-  id: number;
-  text: string;
-}
+import { View, FlatList, Text, StyleSheet } from 'react-native';
+import { Message } from './types';
 
 interface Props {
   messages: Message[];
@@ -23,7 +19,7 @@ const Messages: React.FC<Props> = ({ messages }) => {
       data={messages}
       renderItem={renderMessage}
       keyExtractor={(item) => item.id.toString()}
-    //   inverted // To show the latest message at the bottom
+      //   inverted // To show the latest message at the bottom
     />
   );
 };

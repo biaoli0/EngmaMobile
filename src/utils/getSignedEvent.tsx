@@ -4,8 +4,9 @@ import { hmac } from '@noble/hashes/hmac';
 import { schnorr } from '@noble/curves/secp256k1';
 secp.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp.etc.concatBytes(...m));
 import { bytesToHex } from './hex';
+import { Event, SignedEvent } from '../types';
 
-export async function getSignedEvent(event, privateKey) {
+export async function getSignedEvent(event: Event, privateKey: string): Promise<SignedEvent> {
   const eventData = JSON.stringify([
     0, // Reserved for future use
     event['pubkey'], // The sender's public key
@@ -14,7 +15,7 @@ export async function getSignedEvent(event, privateKey) {
     event['tags'], // Tags identify replies/recipients
     event['content'], // Your note contents
   ]);
-  event.id = bytesToHex(await sha256(new TextEncoder().encode(eventData)));
-  event.sig = bytesToHex(await schnorr.sign(event.id, privateKey));
-  return event;
+  const id = bytesToHex(await sha256(new TextEncoder().encode(eventData)));
+  const sig = bytesToHex(await schnorr.sign(id, privateKey));
+  return { ...event, id, sig };
 }

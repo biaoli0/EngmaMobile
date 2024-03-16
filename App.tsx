@@ -12,12 +12,15 @@ import * as secp from '@noble/secp256k1';
 import 'react-native-get-random-values';
 import { hmac } from '@noble/hashes/hmac';
 import { sha256 } from '@noble/hashes/sha256';
-secp.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp.etc.concatBytes(...m));
-secp.etc.hmacSha256Async = (k, ...m) => Promise.resolve(secp.etc.hmacSha256Sync(k, ...m));
+
+const hmacSha256Sync = (k: Input, ...m: any[]) => hmac(sha256, k, secp.etc.concatBytes(...m));
+secp.etc.hmacSha256Sync = hmacSha256Sync;
+secp.etc.hmacSha256Async = (k, ...m) => Promise.resolve(hmacSha256Sync(k, ...m));
 
 import {
   Keyboard,
   KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,13 +33,15 @@ import Messages from './src/Messages';
 import { bytesToHex } from './src/utils/hex';
 import { privKey, getPubKey } from './src/constants';
 import { getSignedEvent } from './src/utils/getSignedEvent';
+import { Input } from '@noble/hashes/utils';
+import { Message } from './src/types';
 
 const relay = 'wss://relay.damus.io';
 const socket = new WebSocket(relay);
 const pubKey = getPubKey();
 
 function App(): React.JSX.Element {
-  const [messages, setMessages] = React.useState([]);
+  const [messages, setMessages] = React.useState<Message[]>([]);
   const [text, setText] = React.useState('');
 
   // Subscribe to the relay
