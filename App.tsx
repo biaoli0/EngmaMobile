@@ -34,10 +34,12 @@ import { privKey, getPubKey } from './src/constants';
 import { getSignedEvent } from './src/utils/getSignedEvent';
 import { Input, bytesToHex } from '@noble/hashes/utils';
 import { Message } from './src/types';
+import { v2 } from './src/utils/encryption';
 
 const relay = 'wss://relay.damus.io';
 const socket = new WebSocket(relay);
 const pubKey = getPubKey();
+const conversationKey = v2.utils.getConversationKey(privKey, pubKey);
 
 function App(): React.JSX.Element {
   const [messages, setMessages] = React.useState<Message[]>([]);
@@ -60,7 +62,12 @@ function App(): React.JSX.Element {
   socket.onmessage = async (message) => {
     console.log('receiving message:', message);
     const [type, subId, event] = JSON.parse(message.data);
-    const { kind, content, id } = event || {};
+    const { kind, content: encryptedContent, id } = event || {};
+    console.log('encryptedContent:', encryptedContent);
+
+    const content = v2.decrypt(encryptedContent, conversationKey);
+    console.log('content: ', content);
+
     if (!event || event === true) return;
 
     // if (kind === 4) {
@@ -74,9 +81,11 @@ function App(): React.JSX.Element {
   const onPressSend = async () => {
     // Send message to the relay
     console.log('Sending message:', text);
+    const content = v2.encrypt(text, conversationKey);
+    console.log('encryptedContent:', content);
 
     const event = {
-      content: text,
+      content,
       created_at: Math.floor(Date.now() / 1000),
       kind: 1,
       tags: [],
