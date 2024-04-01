@@ -23,20 +23,25 @@ import {
 } from 'react-native';
 
 import { Input, bytesToHex } from '@noble/hashes/utils';
-import { getPubKey, privKey } from '../constants';
+import { getPubKey, getLocalPrivKey } from '../constants';
 import { v2 } from '../utils/encryption';
 import { Message } from '../types';
 import { getSignedEvent } from '../utils/getSignedEvent';
 import Messages from '../Messages';
 
-const relay = 'wss://relay.damus.io';
-const socket = new WebSocket(relay);
-const pubKey = getPubKey();
-const conversationKey = v2.utils.getConversationKey(privKey, pubKey);
-
-const ConversationScreen = () => {
+const ConversationScreen = async ({ navigation }) => {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [text, setText] = React.useState('');
+
+  const relay = 'wss://relay.damus.io';
+  const socket = new WebSocket(relay);
+  const privKey = await getLocalPrivKey();
+  if (!privKey) {
+    navigation.navigate('WelcomeScreen');
+    return null;
+  }
+  const pubKey = getPubKey(privKey);
+  const conversationKey = v2.utils.getConversationKey(privKey, pubKey);
 
   // Subscribe to the relay
   socket.onopen = () => {
