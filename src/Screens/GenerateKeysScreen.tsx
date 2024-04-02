@@ -1,13 +1,31 @@
 import Clipboard from '@react-native-clipboard/clipboard';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { generatePrivKey, getPubKey } from '../constants';
 import { saveKeysToLocal } from '../utils/saveKeysToLocal';
 
-const GenerateKeysScreen = async () => {
-  const privKey = await generatePrivKey();
-  const publicKey = await getPubKey(privKey);
-  await saveKeysToLocal(privKey, publicKey);
+const GenerateKeysScreen = ({ navigation }) => {
+  const [privKey, setPrivKey] = useState('');
+  const [publicKey, setPublicKey] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const newPrivKey = await generatePrivKey();
+        console.log('newPrivKey:', newPrivKey);
+        const newPublicKey = await getPubKey(newPrivKey);
+        console.log('newPublicKey:', newPublicKey);
+        await saveKeysToLocal(newPrivKey, newPublicKey);
+        console.log('saved keys to local');
+        setPrivKey(newPrivKey);
+        setPublicKey(newPublicKey);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Function to copy text
   const copyToClipboard = (text) => {
@@ -25,6 +43,14 @@ const GenerateKeysScreen = async () => {
       <Text style={styles.label}>Private Key</Text>
       <TouchableOpacity onPress={() => copyToClipboard(privKey)} style={styles.keyContainer}>
         <Text style={styles.keyText}>{privKey}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          navigation.navigate('MainScreen');
+        }}
+        style={styles.keyContainer}
+      >
+        <Text style={styles.keyText}>done</Text>
       </TouchableOpacity>
     </View>
   );

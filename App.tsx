@@ -4,8 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import WelcomeScreen from './src/Screens/WelcomeScreen';
 import EnterKeysScreen from './src/Screens/EnterKeysScreen';
-import ContactListScreen from './src/Screens/ContactListScreen';
 import GenerateKeysScreen from './src/Screens/GenerateKeysScreen';
+import MainScreen from './src/Screens/MainScreen';
 const Stack = createNativeStackNavigator();
 
 function App(): React.JSX.Element {
@@ -19,16 +19,11 @@ function App(): React.JSX.Element {
           options={{ title: 'Engma' }}
         />
         <Stack.Screen
-          name="ContactListScreen"
-          component={ContactListScreen}
-          options={{ title: 'Engma' }}
-        />
-        <Stack.Screen
           name="GenerateKeysScreen"
           component={GenerateKeysScreen}
           options={{ title: 'Engma' }}
         />
-
+        <Stack.Screen name="MainScreen" component={MainScreen} options={{ title: 'Engma' }} />
         {/* Register other screens here */}
       </Stack.Navigator>
     </NavigationContainer>
