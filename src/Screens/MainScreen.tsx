@@ -23,6 +23,7 @@ const MainScreen = () => {
         },
         tabBarActiveTintColor: 'tomato',
         tabBarInactiveTintColor: 'gray',
+        headerShown: false,
       })}
     >
       <Tab.Screen name="Chats" component={ChatsScreen} />

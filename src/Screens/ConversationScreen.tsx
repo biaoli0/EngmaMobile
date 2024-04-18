@@ -1,5 +1,4 @@
-import React from 'react';
-import * as secp from '@noble/secp256k1';
+import React, { useContext } from 'react';
 
 import {
   Keyboard,
@@ -13,61 +12,25 @@ import {
   View,
 } from 'react-native';
 
-import { Input, bytesToHex } from '@noble/hashes/utils';
 import { getPubKey, getLocalPrivKey } from '../constants';
 import { v2 } from '../utils/encryption';
 import { Message } from '../types';
 import { getSignedEvent } from '../utils/getSignedEvent';
 import Messages from '../Messages';
+import WebSocketContext from '../contexts/WebSocketContext';
 
-const ConversationScreen = async ({ navigation }) => {
+const ConversationScreen = async () => {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [text, setText] = React.useState('');
-
-  const relay = 'wss://relay.damus.io';
-  const socket = new WebSocket(relay);
-  const privKey = await getLocalPrivKey();
-  if (!privKey) {
-    navigation.navigate('WelcomeScreen');
-    return null;
+  const socket = useContext(WebSocketContext);
+  if (!socket) {
+    throw new Error('Socket is not available');
   }
+
+  const privKey = await getLocalPrivKey();
   const pubKey = getPubKey(privKey);
+
   const conversationKey = v2.utils.getConversationKey(privKey, pubKey);
-
-  // Subscribe to the relay
-  socket.onopen = () => {
-    console.log('connected to ' + relay);
-    setMessages([]);
-    const subId = bytesToHex(secp.utils.randomPrivateKey()).substring(0, 16);
-    const filter = { authors: [pubKey] };
-
-    const subscription = ['REQ', subId, filter];
-    console.log('Subscription:', subscription);
-
-    socket.send(JSON.stringify(subscription));
-  };
-
-  // Log any messages the relay sends you
-  socket.onmessage = async (message) => {
-    console.log('receiving message:', message);
-    const [type, subId, event] = JSON.parse(message.data);
-    if (type === 'EVENT') {
-      const { kind, content: encryptedContent, id } = event || {};
-      console.log('encryptedContent on receive:', encryptedContent);
-
-      const content = v2.decrypt(encryptedContent, conversationKey);
-      console.log('content: ', content);
-
-      if (!event || event === true) return;
-
-      // if (kind === 4) {
-      //   content = await decrypt(privKey, event.pubkey, content);
-      // }
-
-      setMessages([...messages, { id, text: content }]);
-      // window.scrollTo(0, document.body.scrollHeight);
-    }
-  };
 
   const onPressSend = async () => {
     // Send message to the relay
@@ -84,7 +47,7 @@ const ConversationScreen = async ({ navigation }) => {
     };
     const signedEvent = await getSignedEvent(event, privKey);
     console.log('signedEvent:', signedEvent);
-    socket.send(JSON.stringify(['EVENT', signedEvent]));
+    // socket.send(JSON.stringify(['EVENT', signedEvent]));
 
     // Clear input after sending
     setText('');
