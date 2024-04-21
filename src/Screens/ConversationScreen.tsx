@@ -13,9 +13,7 @@ import {
 } from 'react-native';
 
 import { getPubKey, getLocalPrivKey } from '../constants';
-import { v2 } from '../utils/encryption';
 import { Message } from '../types';
-import { getSignedEvent } from '../utils/getSignedEvent';
 import Messages from '../Messages';
 import WebSocketContext from '../contexts/WebSocketContext';
 
@@ -30,26 +28,9 @@ const ConversationScreen = async () => {
   const privKey = await getLocalPrivKey();
   const pubKey = getPubKey(privKey);
 
-  const conversationKey = v2.utils.getConversationKey(privKey, pubKey);
-
   const onPressSend = async () => {
     // Send message to the relay
     console.log('Sending message:', text);
-    const content = v2.encrypt(text, conversationKey);
-    console.log('encryptedContent:', content);
-
-    const event = {
-      content,
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 1,
-      tags: [],
-      pubkey: pubKey,
-    };
-    const signedEvent = await getSignedEvent(event, privKey);
-    console.log('signedEvent:', signedEvent);
-    // socket.send(JSON.stringify(['EVENT', signedEvent]));
-
-    // Clear input after sending
     setText('');
   };
 

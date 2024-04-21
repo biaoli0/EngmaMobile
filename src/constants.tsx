@@ -7,6 +7,8 @@ import { bytesToHex } from '@noble/hashes/utils';
 import 'react-native-get-random-values';
 import { hmac } from '@noble/hashes/hmac';
 import { sha256 } from '@noble/hashes/sha256';
+import { v2 } from './utils/encryption';
+import { NoPrivateKeyError } from './errors';
 const hmacSha256Sync = (k: Input, ...m: any[]) => hmac(sha256, k, secp.etc.concatBytes(...m));
 secp.etc.hmacSha256Sync = hmacSha256Sync;
 secp.etc.hmacSha256Async = (k, ...m) => Promise.resolve(hmacSha256Sync(k, ...m));
@@ -17,7 +19,7 @@ secp.etc.hmacSha256Async = (k, ...m) => Promise.resolve(hmacSha256Sync(k, ...m))
 export const getLocalPrivKey = async () => {
   const privKey = await AsyncStorage.getItem('privKey');
   if (!privKey) {
-    throw new Error('No privKey found on local');
+    throw new NoPrivateKeyError('No privKey found on local');
   }
   return privKey;
 };
@@ -34,4 +36,10 @@ export const getPubKey = (privKey: string) => {
   const pubKeyString = bytesToHex(pubKey);
   console.log('pubKey:', pubKeyString);
   return pubKeyString.substring(2);
+};
+
+export const getConversationKey = async () => {
+  const privKey = await getLocalPrivKey();
+  const pubKey = getPubKey(privKey);
+  return v2.utils.getConversationKey(privKey, pubKey);
 };

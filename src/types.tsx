@@ -7,7 +7,7 @@ export type Event = {
   content: string;
   created_at: number;
   kind: number;
-  tags: string[];
+  tags: string[][];
   pubkey: string;
 };
 
