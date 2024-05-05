@@ -8,43 +8,46 @@ import EnterKeysScreen from './src/Screens/EnterKeysScreen';
 import GenerateKeysScreen from './src/Screens/GenerateKeysScreen';
 import MainScreen from './src/Screens/MainScreen';
 import DropdownMenu from './src/components/DropdownMenu';
-import WebSocketProvider from './src/contexts/WebSocketProvider';
+import ContactSearchScreen from './src/Screens/ContactSearchScreen';
 const Stack = createNativeStackNavigator();
 
 function App(): React.JSX.Element {
   return (
-    <WebSocketProvider>
-      <PaperProvider>
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName="WelcomeScreen">
-            <Stack.Screen
-              name="WelcomeScreen"
-              component={WelcomeScreen}
-              options={{ title: 'Engma' }}
-            />
-            <Stack.Screen
-              name="EnterKeysScreen"
-              component={EnterKeysScreen}
-              options={{ title: 'Engma' }}
-            />
-            <Stack.Screen
-              name="GenerateKeysScreen"
-              component={GenerateKeysScreen}
-              options={{ title: 'Engma' }}
-            />
-            <Stack.Screen
-              name="MainScreen"
-              component={MainScreen}
-              options={{
-                title: 'Engma',
-                headerRight: () => <DropdownMenu />,
-              }}
-            />
-            {/* Register other screens here */}
-          </Stack.Navigator>
-        </NavigationContainer>
-      </PaperProvider>
-    </WebSocketProvider>
+    <PaperProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="WelcomeScreen">
+          <Stack.Screen
+            name="WelcomeScreen"
+            component={WelcomeScreen}
+            options={{ title: 'Engma' }}
+          />
+          <Stack.Screen
+            name="EnterKeysScreen"
+            component={EnterKeysScreen}
+            options={{ title: 'Engma' }}
+          />
+          <Stack.Screen
+            name="GenerateKeysScreen"
+            component={GenerateKeysScreen}
+            options={{ title: 'Engma' }}
+          />
+          <Stack.Screen
+            name="ContactSearchScreen"
+            component={ContactSearchScreen}
+            options={{ title: 'Engma' }}
+          />
+          <Stack.Screen
+            name="MainScreen"
+            component={MainScreen}
+            options={({ route, navigation }) => ({
+              title: 'Engma',
+              headerRight: () => <DropdownMenu navigation={navigation} />,
+            })}
+          />
+          {/* Register other screens here */}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </PaperProvider>
   );
 }
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { IconButton } from 'react-native-paper';
 import { Menu } from 'react-native-paper';
 
-const DropdownMenu = () => {
+const DropdownMenu = ({ navigation }) => {
   const [visible, setVisible] = useState(false);
 
   const openMenu = () => setVisible(true);
@@ -24,7 +24,13 @@ const DropdownMenu = () => {
       }}
     >
       <Menu.Item onPress={() => {}} title="New Chat" />
-      <Menu.Item onPress={() => {}} title="Add Contacts" />
+      <Menu.Item
+        onPress={() => {
+          navigation.navigate('ContactSearchScreen');
+          closeMenu();
+        }}
+        title="Add Contacts"
+      />
     </Menu>
   );
 };

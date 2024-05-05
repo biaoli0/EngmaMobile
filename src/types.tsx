@@ -15,3 +15,8 @@ export type SignedEvent = Event & {
   id: string;
   sig: string;
 };
+
+export type NewContact = {
+  name: string;
+  publicKey: string;
+};

@@ -17,9 +17,9 @@ secp.etc.hmacSha256Async = (k, ...m) => Promise.resolve(hmacSha256Sync(k, ...m))
 // export const privKey = 'd90ad8a8df94ce08ff585d54bf74d5cab44924bfb945593f261b561558410c06';
 
 export const getLocalPrivKey = async () => {
-  const privKey = await AsyncStorage.getItem('privKey');
+  const privKey = await AsyncStorage.getItem('private-key');
   if (!privKey) {
-    throw new NoPrivateKeyError('No privKey found on local');
+    throw new NoPrivateKeyError('No private-key found on local');
   }
   return privKey;
 };
