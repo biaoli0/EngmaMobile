@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ConnectButton from './ConnectButton';
-import { NewContact } from '../types';
+import { Contact } from '../types';
 
-const NewContactPanel = ({ newContact }: { newContact: NewContact }) => {
+const NewContactPanel = ({ newContact }: { newContact: Contact }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.newContact}>{newContact.name}</Text>

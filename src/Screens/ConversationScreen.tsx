@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useEffect } from 'react';
 
 import {
   Keyboard,
@@ -12,25 +12,51 @@ import {
   View,
 } from 'react-native';
 
-import { getPubKey, getLocalPrivKey } from '../constants';
-import { Message } from '../types';
+import { Contact, Message } from '../types';
 import Messages from '../Messages';
-import WebSocketContext from '../contexts/WebSocketContext';
+import { KINDS, getRelayService } from '../RelayService';
+import { Event } from 'nostr-tools';
 
-const ConversationScreen = async () => {
+// A screen to show the first message of all conversation
+const ConversationScreen = ({ route }) => {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [text, setText] = React.useState('');
-  const socket = useContext(WebSocketContext);
-  if (!socket) {
-    throw new Error('Socket is not available');
-  }
+  const { contact } = route.params;
 
-  const privKey = await getLocalPrivKey();
-  const pubKey = getPubKey(privKey);
+  useEffect(() => {
+    const getMessages = async () => {
+      console.log('calling getMessages()');
+      if (contact && contact.publicKey) {
+        console.log('contact: ', route.params.contact);
+        const relay = await getRelayService();
+        const filter1 = {
+          authors: [relay.getPublicKey()],
+          kinds: [KINDS.DIRECT_MESSAGE],
+          '#p': [contact.publicKey],
+        };
+        const filter2 = {
+          authors: [contact.publicKey],
+          kinds: [KINDS.DIRECT_MESSAGE],
+          '#p': [relay.getPublicKey()],
+        };
+
+        await relay.subscribeToEvent([filter1, filter2], (event: Event) => {
+          const { content, id, created_at: createdAt, pubkey } = event || {};
+          const newMessage: Message = { id, text: content, createdAt, publicKey: pubkey };
+          const newMessages = [...messages, newMessage].sort((a, b) => a.createdAt - b.createdAt);
+          setMessages(newMessages);
+        });
+      }
+    };
+
+    getMessages();
+  }, []);
 
   const onPressSend = async () => {
     // Send message to the relay
     console.log('Sending message:', text);
+    const relay = await getRelayService();
+    await relay.sendMessageTo(contact.publicKey, text);
     setText('');
   };
 
@@ -39,9 +65,7 @@ const ConversationScreen = async () => {
       style={styles.keyboardAvoidingContainer}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <Messages messages={messages} />
-      </ScrollView>
+      <Messages messages={messages} />
       <View style={styles.container}>
         <TextInput
           style={styles.input}

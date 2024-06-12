@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { saveKeysToLocal } from '../utils/saveKeysToLocal';
+import { resetRelayService } from '../RelayService';
 
 const EnterKeysScreen = ({ navigation }) => {
   const [publicKey, setPublicKey] = useState('');
   const [privateKey, setPrivateKey] = useState('');
 
   const handleSubmit = async () => {
-    // Handle the submission of the keys
     await saveKeysToLocal(privateKey, publicKey);
-    navigation.navigate('ContactListScreen');
+    await resetRelayService();
+    navigation.navigate('MainScreen');
   };
 
   return (

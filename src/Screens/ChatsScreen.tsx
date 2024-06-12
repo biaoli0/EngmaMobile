@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { Contact } from '../types';
 
 // Sample data for chats
 const chatData = [
@@ -10,7 +11,7 @@ const chatData = [
 ];
 
 const ChatsScreen = () => {
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: Contact }) => (
     <TouchableOpacity style={styles.chatItem}>
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{item.name[0]}</Text>

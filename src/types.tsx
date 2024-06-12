@@ -1,6 +1,8 @@
 export type Message = {
   id: string;
   text: string;
+  createdAt: number;
+  publicKey: string;
 };
 
 export type Event = {
@@ -16,7 +18,9 @@ export type SignedEvent = Event & {
   sig: string;
 };
 
-export type NewContact = {
+export type Contact = {
   name: string;
   publicKey: string;
 };
+
+export type FriendOrFollowList = Record<string, { name: string }>;

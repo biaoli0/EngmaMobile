@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { generatePrivKey, getPubKey } from '../constants';
 import { saveKeysToLocal } from '../utils/saveKeysToLocal';
-import { KINDS, getRelayService } from '../RelayService';
+import { KINDS, getRelayService, resetRelayService } from '../RelayService';
 
 const GenerateKeysScreen = ({ navigation }) => {
   const [privKey, setPrivKey] = useState('');
@@ -11,12 +11,12 @@ const GenerateKeysScreen = ({ navigation }) => {
 
   const updateProfile = async () => {
     const relay = await getRelayService();
-    console.log(relay);
-    await relay.updateProfile('billy');
+    await relay.updateProfile(publicKey.substring(0, 6));
   };
 
   useEffect(() => {
     const fetchData = async () => {
+      console.log('calling fetchData() in GenerateKeysScreen');
       try {
         const newPrivKey = await generatePrivKey();
         const newPublicKey = await getPubKey(newPrivKey);
@@ -52,6 +52,7 @@ const GenerateKeysScreen = ({ navigation }) => {
       </TouchableOpacity>
       <TouchableOpacity
         onPress={async () => {
+          await resetRelayService();
           await updateProfile();
           navigation.navigate('MainScreen');
         }}

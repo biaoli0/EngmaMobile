@@ -1,33 +1,20 @@
 import React, { useState } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet } from 'react-native';
-import { KINDS, getRelayService } from '../RelayService';
-import ConnectButton from '../components/ConnectButton';
+import { View, TextInput, FlatList, StyleSheet } from 'react-native';
+import { getRelayService } from '../RelayService';
 import NewContactPanel from '../components/NewContactPanel';
 
 const ContactSearchScreen = () => {
   const [query, setQuery] = useState('');
   const [filteredContacts, setFilteredContacts] = useState([]);
 
-  // Dummy data for contacts
-  const contacts = [
-    { id: '1', name: 'Alice Johnson' },
-    { id: '2', name: 'Bob Brown' },
-    { id: '3', name: 'Charlie Davis' },
-    { id: '4', name: 'David Evans' },
-  ];
-
   const handleSearch = async (text) => {
     setQuery(text);
     const trimmedText = text.trim();
     if (trimmedText && trimmedText.length === 64) {
       const relay = await getRelayService();
-      const filter = { authors: [trimmedText], kinds: [KINDS.PROFILE] };
-      await relay.subscribeToEvent(filter, (event) => {
-        const { tags } = event || {};
-        const [, name] = tags[0];
-        setFilteredContacts([{ id: 1, name, publicKey: trimmedText }]);
-      });
+      const { name } = await relay.getUserProfile(trimmedText);
 
+      setFilteredContacts([{ id: 1, name, publicKey: trimmedText }]);
       //   const profileName = await subscription.onevent();
       //   setFilteredContacts(filteredData);
     } else {

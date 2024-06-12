@@ -9,6 +9,8 @@ import GenerateKeysScreen from './src/Screens/GenerateKeysScreen';
 import MainScreen from './src/Screens/MainScreen';
 import DropdownMenu from './src/components/DropdownMenu';
 import ContactSearchScreen from './src/Screens/ContactSearchScreen';
+import ProfileScreen from './src/Screens/ProfileScreen';
+import ConversationScreen from './src/Screens/ConversationScreen';
 const Stack = createNativeStackNavigator();
 
 function App(): React.JSX.Element {
@@ -34,6 +36,16 @@ function App(): React.JSX.Element {
           <Stack.Screen
             name="ContactSearchScreen"
             component={ContactSearchScreen}
+            options={{ title: 'Engma' }}
+          />
+          <Stack.Screen
+            name="ProfileScreen"
+            component={ProfileScreen}
+            options={{ title: 'Engma' }}
+          />
+          <Stack.Screen
+            name="ConversationScreen"
+            component={ConversationScreen}
             options={{ title: 'Engma' }}
           />
           <Stack.Screen

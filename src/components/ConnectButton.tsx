@@ -1,46 +1,35 @@
 import React, { useEffect, useState } from 'react';
-import { Event } from 'nostr-tools';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+
+import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { getRelayService } from '../RelayService';
-import { NewContact } from '../types';
+import { Contact } from '../types';
 
-const checkIfTagsContainPubKey = (tags: string[][], publicKey: string) => {
-  tags.forEach((tag) => {
-    const tagStr = tag.toString();
-    if (tagStr.includes(publicKey)) {
-      return true;
-    }
-  });
-
-  return false;
-};
-
-const ConnectButton = ({ newContact }: { newContact: NewContact }) => {
+const ConnectButton = ({ newContact }: { newContact: Contact }) => {
   const [status, setStatus] = useState('connect'); //pending, connected, connect
   const [myInvitationStatus, setMyInvitationStatus] = useState(false);
   const [theirInvitationStatus, setTheirInvitationStatus] = useState(false);
 
   useEffect(() => {
     const loadInvitationStatuses = async () => {
+      console.log('calling loadInvitationStatuses()');
       const relay = await getRelayService();
-      const followList = relay.getFollowList();
-      const newMyInvitationStatus = Object.keys(followList).includes(newContact.publicKey);
+
+      const myFollowList = await relay.getUserFollowList(relay.getPublicKey());
+      const newMyInvitationStatus = myFollowList.includes(newContact.publicKey);
+
+      const theirFollowList = await relay.getUserFollowList(newContact.publicKey);
+      const newTheirInvitationStatus = theirFollowList.includes(relay.getPublicKey());
+
       setMyInvitationStatus(newMyInvitationStatus);
-
-      const getTheirFollowList = (event: Event) => {
-        const { tags } = event || {};
-        console.log('their tags', tags);
-        const newTheirInvitationStatus = checkIfTagsContainPubKey(tags, newContact.publicKey);
-        setTheirInvitationStatus(newTheirInvitationStatus);
-      };
-
-      await relay.getUserFollowList(newContact.publicKey, getTheirFollowList);
+      setTheirInvitationStatus(newTheirInvitationStatus);
     };
 
     loadInvitationStatuses();
   }, [newContact.publicKey]);
 
   useEffect(() => {
+    console.log('myInvitationStatus', myInvitationStatus);
+    console.log('theirInvitationStatus', theirInvitationStatus);
     if (myInvitationStatus && theirInvitationStatus) {
       setStatus('connected');
     }

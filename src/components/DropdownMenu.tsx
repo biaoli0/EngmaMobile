@@ -31,6 +31,14 @@ const DropdownMenu = ({ navigation }) => {
         }}
         title="Add Contacts"
       />
+
+      <Menu.Item
+        onPress={() => {
+          navigation.navigate('ProfileScreen');
+          closeMenu();
+        }}
+        title="Settings"
+      />
     </Menu>
   );
 };
