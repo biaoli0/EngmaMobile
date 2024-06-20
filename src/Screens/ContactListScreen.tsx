@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { getRelayService } from '../RelayService';
+import { getRelayService } from '../models/RelayService';
 import { Contact } from '../types';
 
 const ContactListScreen = ({ navigation }) => {
@@ -10,7 +10,7 @@ const ContactListScreen = ({ navigation }) => {
       console.log('calling getFollowList()');
       const relay = await getRelayService();
 
-      const newFriendList = await relay.fetchFriendList(relay.getPublicKey());
+      const newFriendList = await relay.fetchFriendList();
       setFriendList(
         Object.entries(newFriendList).map(([publicKey, { name }]) => {
           return { publicKey, name };
@@ -22,7 +22,6 @@ const ContactListScreen = ({ navigation }) => {
   }, []);
 
   const handlePress = (item: Contact) => () => {
-    console.log('item: ', item);
     navigation.navigate('ConversationScreen', {
       contact: item,
     });
@@ -42,12 +41,12 @@ const ContactListScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   itemContainer: {
-    padding: 20,
-    borderBottomWidth: 1,
+    padding: 10,
     borderBottomColor: '#cccccc',
+    borderBottomWidth: 0.5,
   },
   itemText: {
-    fontSize: 18,
+    fontSize: 14,
   },
 });
 

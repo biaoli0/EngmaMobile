@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { RelayService } from '../RelayService';
+import { RelayService } from '../models/RelayService';
 
 interface RelayWebSocket {
   relay: RelayService;

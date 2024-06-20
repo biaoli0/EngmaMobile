@@ -46,7 +46,7 @@ function App(): React.JSX.Element {
           <Stack.Screen
             name="ConversationScreen"
             component={ConversationScreen}
-            options={{ title: 'Engma' }}
+            options={{ title: 'Engma', headerBackVisible: false }}
           />
           <Stack.Screen
             name="MainScreen"

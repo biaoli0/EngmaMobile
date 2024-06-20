@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, FlatList, StyleSheet } from 'react-native';
-import { getRelayService } from '../RelayService';
+import { getRelayService } from '../models/RelayService';
 import NewContactPanel from '../components/NewContactPanel';
 
 const ContactSearchScreen = () => {

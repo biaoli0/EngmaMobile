@@ -38,8 +38,13 @@ export const getPubKey = (privKey: string) => {
   return pubKeyString.substring(2);
 };
 
-export const getConversationKey = async () => {
-  const privKey = await getLocalPrivKey();
-  const pubKey = getPubKey(privKey);
-  return v2.utils.getConversationKey(privKey, pubKey);
+export const emptyMessage = {
+  id: '',
+  text: '',
+  user: '',
+  publickey: '',
+  createdAt: 1,
+  avatar: '',
+  isCurrentUser: true,
+  convoWith: { publicKey: '', name: '' },
 };

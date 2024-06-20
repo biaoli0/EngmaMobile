@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { getRelayService } from '../RelayService';
+import { getRelayService } from '../models/RelayService';
 
 const ProfileScreen = () => {
   const [name, setName] = useState('');

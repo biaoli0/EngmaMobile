@@ -1,51 +1,87 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { BackHandler, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Contact, Message } from '../types';
 import Messages from '../Messages';
-import { KINDS, getRelayService } from '../RelayService';
-import { Event } from 'nostr-tools';
+import { KINDS, getRelayService } from '../models/RelayService';
+import { Event, Subscription } from 'nostr-tools';
+import { emptyMessage } from '../constants';
+import { useFocusEffect } from '@react-navigation/native';
+
+type Route = {
+  params: { contact: Contact };
+};
 
 // A screen to show the first message of all conversation
-const ConversationScreen = ({ route }) => {
-  const [messages, setMessages] = React.useState<Message[]>([]);
+const ConversationScreen = ({ route, navigation }: { route: Route }) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState<Message>(emptyMessage);
+  const [sub, setSub] = useState<Subscription>();
   const [text, setText] = React.useState('');
   const { contact } = route.params;
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (sub) {
+          sub.close();
+        }
+        navigation.goBack();
+        return true;
+      };
+
+      // Add the event listener
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      // Clean up the event listener
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [navigation, sub]),
+  );
+
+  useEffect(() => {
+    if (newMessage.id !== emptyMessage.id) {
+      const newMessages = [...messages, newMessage].sort((a, b) => a.createdAt - b.createdAt);
+      setMessages(newMessages);
+    }
+  }, [newMessage]);
 
   useEffect(() => {
     const getMessages = async () => {
       console.log('calling getMessages()');
-      if (contact && contact.publicKey) {
+      const relay = await getRelayService();
+      const myPubkey = relay.getPublicKey();
+      const { name: myName } = await relay.getUserProfile(myPubkey);
+
+      if (myPubkey && contact && contact.publicKey) {
         console.log('contact: ', route.params.contact);
-        const relay = await getRelayService();
+
         const filter1 = {
-          authors: [relay.getPublicKey()],
+          authors: [myPubkey],
           kinds: [KINDS.DIRECT_MESSAGE],
           '#p': [contact.publicKey],
         };
         const filter2 = {
           authors: [contact.publicKey],
           kinds: [KINDS.DIRECT_MESSAGE],
-          '#p': [relay.getPublicKey()],
+          '#p': [myPubkey],
         };
 
-        await relay.subscribeToEvent([filter1, filter2], (event: Event) => {
+        const sub = await relay.subscribeToEvent([filter1, filter2], (event: Event) => {
           const { content, id, created_at: createdAt, pubkey } = event || {};
-          const newMessage: Message = { id, text: content, createdAt, publicKey: pubkey };
-          const newMessages = [...messages, newMessage].sort((a, b) => a.createdAt - b.createdAt);
-          setMessages(newMessages);
+          const newMessage: Message = {
+            id,
+            text: content,
+            createdAt,
+            avatar: 'https://via.placeholder.com/40',
+            isCurrentUser: pubkey === myPubkey,
+            user: pubkey === myPubkey ? myName : contact.name,
+            publickey: pubkey,
+          };
+          setNewMessage(newMessage);
         });
+
+        setSub(sub);
       }
     };
 
@@ -55,22 +91,19 @@ const ConversationScreen = ({ route }) => {
   const onPressSend = async () => {
     // Send message to the relay
     console.log('Sending message:', text);
+    console.log('receiver:', contact);
     const relay = await getRelayService();
     await relay.sendMessageTo(contact.publicKey, text);
     setText('');
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.keyboardAvoidingContainer}>
       <Messages messages={messages} />
-      <View style={styles.container}>
+
+      <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Type your message..."
-          onSubmitEditing={() => Keyboard.dismiss()} // Dismiss keyboard when submitted
           onChangeText={(inputText: string) => {
             setText(inputText);
           }}
@@ -80,46 +113,38 @@ const ConversationScreen = ({ route }) => {
           <Text style={styles.buttonText}>Send</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingBottom: 30, // Adjust this value to accommodate the height of child2
-  },
   keyboardAvoidingContainer: {
     flex: 1,
-    position: 'relative',
   },
-  container: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    margin: 10,
-    position: 'absolute',
-    bottom: 0, // Stick to the bottom
+    backgroundColor: '#424242',
   },
   input: {
     flex: 1,
-    paddingVertical: 8,
     fontSize: 16,
+    borderRadius: 10,
+    color: '#fff',
+    backgroundColor: '#2d2d2d',
+    paddingVertical: 5,
+    margin: 10,
   },
   button: {
-    marginLeft: 10,
     paddingHorizontal: 15,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#841584',
+    borderRadius: 10,
+    backgroundColor: '#0e6f0e',
+    margin: 10,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 

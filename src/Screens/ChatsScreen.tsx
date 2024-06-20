@@ -1,75 +1,143 @@
-import React from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { Contact } from '../types';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { Message as BaseMessage, Contact } from '../types';
+import { emptyMessage } from '../constants';
+import { KINDS, getRelayService } from '../models/RelayService';
+import { Event } from 'nostr-tools';
 
-// Sample data for chats
-const chatData = [
-  { id: '1', name: 'Friend 1', latestMessage: 'How are you?' },
-  { id: '2', name: 'Friend 2', latestMessage: 'Let’s catch up tomorrow!' },
-  { id: '3', name: 'Friend 3', latestMessage: 'Did you see that email?' },
-  // ... more chats
-];
+type Message = BaseMessage & { convoWith: Contact };
 
-const ChatsScreen = () => {
-  const renderItem = ({ item }: { item: Contact }) => (
-    <TouchableOpacity style={styles.chatItem}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{item.name[0]}</Text>
-      </View>
-      <View style={styles.chatInfo}>
-        <Text style={styles.chatName}>{item.name}</Text>
-        <Text style={styles.chatMessage}>{item.latestMessage}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+const ChatsScreen = ({ navigation }) => {
+  const [messages, setMessages] = useState<Record<string, Message>>({});
+  const [newMessage, setNewMessage] = useState<Message>(emptyMessage);
+
+  const chatItems = Object.entries(messages)
+    .map(([, message]) => {
+      return message;
+    })
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  useEffect(() => {
+    if (newMessage.id !== emptyMessage.id) {
+      if (
+        !messages[newMessage.publickey] ||
+        messages[newMessage.publickey].createdAt < newMessage.createdAt
+      ) {
+        const newMessages = { ...messages, [newMessage.convoWith.publicKey]: newMessage };
+        setMessages(newMessages);
+      }
+    }
+  }, [newMessage]);
+
+  useEffect(() => {
+    const getMessages = async () => {
+      console.log('calling getMessages()');
+      const relay = await getRelayService();
+      const myPubkey = relay.getPublicKey();
+      const { name: myName } = await relay.getUserProfile(myPubkey);
+      const friends = await relay.fetchFriendList();
+
+      const filters = Object.keys(friends)
+        .map((friendPubKey) => {
+          const filter1 = {
+            authors: [myPubkey],
+            kinds: [KINDS.DIRECT_MESSAGE],
+            '#p': [friendPubKey],
+          };
+          const filter2 = {
+            authors: [friendPubKey],
+            kinds: [KINDS.DIRECT_MESSAGE],
+            '#p': [myPubkey],
+          };
+          return [filter1, filter2];
+        })
+        .flat();
+
+      await relay.subscribeToEvent(filters, (event: Event) => {
+        const { content, id, created_at: createdAt, pubkey } = event || {};
+        const date = new Date(createdAt);
+        const formattedDate = date.toLocaleTimeString();
+
+        const newMessage: Message = {
+          id,
+          avatar: 'https://via.placeholder.com/40',
+          user: pubkey === myPubkey ? myName : friends[pubkey].name,
+          publickey: pubkey,
+          text: content,
+          createdAt,
+          isCurrentUser: pubkey === myPubkey,
+          time: formattedDate,
+          convoWith: { publicKey: pubkey, name: friends[pubkey].name },
+        };
+        setNewMessage(newMessage);
+      });
+    };
+
+    getMessages();
+  }, []);
+
+  const handlePress = (item: Message) => () => {
+    navigation.navigate('ConversationScreen', {
+      contact: { name: item.user, publicKey: item.publickey },
+    });
+  };
 
   return (
-    <FlatList
-      data={chatData}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      style={styles.container}
-    />
+    <View style={styles.container}>
+      <ScrollView style={styles.chatList}>
+        {chatItems.map((item) => (
+          <TouchableOpacity key={item.id} style={styles.chatItem} onPress={handlePress(item)}>
+            <Image source={{ uri: item.avatar }} style={styles.chatIcon} />
+            <View style={styles.chatText}>
+              <Text style={styles.chatTitle}>{item.user}</Text>
+              <Text style={styles.chatSubtitle}>{item.text}</Text>
+            </View>
+            <Text style={styles.chatTime}>{item.time}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'black',
+  },
+  chatList: {
+    flex: 1,
   },
   chatItem: {
     flexDirection: 'row',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#D8D8D8',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 15,
+    padding: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#333',
+    backgroundColor: '#181818',
   },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
+  chatIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 10,
   },
-  chatInfo: {
-    justifyContent: 'center',
-    overflow: 'hidden',
+  chatText: {
     flex: 1,
+    marginLeft: 16,
   },
-  chatName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
+  chatTitle: {
+    color: '#C8C8C8',
+    fontSize: 14,
+    paddingBottom: 2,
   },
-  chatMessage: {
-    fontSize: 16,
-    color: '#757575',
+  chatSubtitle: {
+    color: '#434343',
+    fontSize: 11,
+  },
+  chatTime: {
+    color: '#434343',
+    fontSize: 11,
   },
 });
 

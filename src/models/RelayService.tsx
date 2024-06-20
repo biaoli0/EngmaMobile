@@ -1,11 +1,11 @@
-import { Event, Filter, Relay } from 'nostr-tools';
-import { v2 } from './utils/encryption';
-import { getSignedEvent } from './utils/getSignedEvent';
-import { getLocalPrivKey, getPubKey } from './constants';
-import { FriendOrFollowList, Contact } from './types';
+import { Event, Filter, Relay, Subscription } from 'nostr-tools';
+import { v2 } from '../utils/encryption';
+import { getSignedEvent } from '../utils/getSignedEvent';
+import { getLocalPrivKey, getPubKey } from '../constants';
+import { FriendOrFollowList, Contact } from '../types';
 
-// const relayUrl = 'wss://relay.damus.io';
-const relayUrl = 'wss://relay.nostrassets.com';
+const relayUrl = 'wss://relay.damus.io';
+// const relayUrl = 'wss://relay.nostrassets.com';
 
 export const KINDS = {
   PROFILE: 2,
@@ -55,26 +55,19 @@ export class RelayService {
   static relay: Relay;
   private privateKey: string;
   private publicKey: string;
+  private subNum: number;
   private followList: FriendOrFollowList = {};
-  private friendList: FriendOrFollowList = {};
   // private cachedEvents: Record<string, Event>;
 
   constructor(privateKey: string, publicKey: string, relay: Relay) {
     RelayService.relay = relay;
     this.privateKey = privateKey;
     this.publicKey = publicKey;
-  }
-
-  private async getConversationKey() {
-    return v2.utils.getConversationKey(this.privateKey, this.publicKey);
+    this.subNum = 0;
   }
 
   public getPublicKey() {
     return this.publicKey;
-  }
-
-  public getFriendList() {
-    return this.friendList;
   }
 
   public async updateProfile(newName: string) {
@@ -82,9 +75,9 @@ export class RelayService {
     await this.publishEvent('profile', KINDS.PROFILE, [['name', newName]]);
   }
 
-  async fetchFriendList(publicKey: string) {
+  async fetchFriendList() {
     const filterForFollowList = {
-      authors: [publicKey],
+      authors: [this.publicKey],
       kinds: [KINDS.FOLLOW_LIST],
       limit: 1,
     };
@@ -97,27 +90,30 @@ export class RelayService {
     });
 
     const filters = trimmedTags.map((tag) => {
-      const [, publicKey] = tag;
-      const filter = { authors: [publicKey], kinds: [KINDS.FOLLOW_LIST], limit: 1 };
+      const [, pubKey] = tag;
+      const filter = { authors: [pubKey], kinds: [KINDS.FOLLOW_LIST], limit: 1 };
       return filter;
     });
 
     const events = await this.fetch(filters);
 
     const friendList: Record<string, { name: string }> = {};
-    events.forEach((e) => {
-      const { tags } = e || {};
+
+    for (const e of events) {
+      const { pubkey: friendPubkey, tags } = e || {};
       const trimmedTags = tags.filter((tag) => {
         return tag[0] === 'p';
       });
-      trimmedTags.forEach((tag) => {
-        const [, publicKey, , name] = tag;
-        if (publicKey === this.publicKey) {
-          friendList[publicKey] = { name };
-          return;
+
+      for (const tag of trimmedTags) {
+        const [, pubKey, , name] = tag;
+        if (pubKey === this.publicKey) {
+          const profile = await this.getUserProfile(friendPubkey);
+          friendList[friendPubkey] = profile;
+          break;
         }
-      });
-    });
+      }
+    }
 
     console.log('friendList', friendList);
     return friendList;
@@ -167,6 +163,7 @@ export class RelayService {
   async fetch(filters: Filter[]): Promise<Event[]> {
     const events: Event[] = [];
     const promises: Promise<void>[] = [];
+    const subs: Promise<Subscription>[] = [];
 
     filters.forEach((filter) => {
       if (filter.limit !== 1) {
@@ -174,20 +171,28 @@ export class RelayService {
       }
       promises.push(
         new Promise<void>((resolve) => {
-          this.subscribeToEvent([filter], (event: Event) => {
+          const sub = this.subscribeToEvent([filter], (event: Event) => {
             events.push(event);
             resolve();
           });
+
+          subs.push(sub);
         }),
       );
     });
 
     await Promise.all(promises);
+    for (const sub of subs) {
+      const s = await sub;
+      s.close();
+    }
 
     return events;
   }
 
   async subscribeToEvent(filters: Filter[], onChange: (params?: any) => void = () => ({})) {
+    this.subNum++;
+    console.log('subNum: ', this.subNum);
     try {
       if (!RelayService.relay || !RelayService.relay.connected) {
         RelayService.relay = await relayConnect();
@@ -198,22 +203,33 @@ export class RelayService {
 
     const subscription = RelayService.relay.subscribe(filters, {
       onevent: async (event: Event) => {
-        console.log('receiving event:', {
-          pubkey: `${event.pubkey.substring(0, 5)}#####`,
-          kind: event.kind,
-          tags: event.tags,
-        });
-        onChange(event);
-        const { kind, content: encryptedContent, id, tags } = event || {};
+        const { kind, content: encryptedContent, id, tags, pubkey } = event || {};
 
-        const conversationKey = await this.getConversationKey();
-        const content = v2.decrypt(encryptedContent, conversationKey);
-        console.log('content: ', content);
-        onChange({ ...event, content });
+        if (kind === KINDS.DIRECT_MESSAGE) {
+          console.log('receiving event:', {
+            pubkey: `${event.pubkey.substring(0, 5)}#####`,
+            tags: event.tags,
+          });
+
+          const conversationKey =
+            pubkey === this.publicKey
+              ? await v2.utils.getConversationKey(this.privateKey, tags[0][1]) // sent message
+              : await v2.utils.getConversationKey(this.privateKey, pubkey); // received message
+          const content = v2.decrypt(encryptedContent, conversationKey);
+          console.log('content: ', content);
+          onChange({ ...event, content });
+        } else {
+          onChange(event);
+        }
         //   setMessages([...messages, { id, text: content }]);
         // window.scrollTo(0, document.body.scrollHeight);
       },
-      onclose: () => {},
+      onclose: () => {
+        this.subNum--;
+        console.log('subNum--: ', this.subNum);
+        return;
+      },
+      eoseTimeout: 9999999,
     });
 
     return subscription;
@@ -225,7 +241,7 @@ export class RelayService {
   }
 
   async publishEvent(text: string, kind: number, tags: string[][] = []) {
-    const conversationKey = await this.getConversationKey();
+    const conversationKey = await v2.utils.getConversationKey(this.privateKey, tags[0][1]);
     const content = v2.encrypt(text, conversationKey);
 
     const event = {

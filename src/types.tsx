@@ -1,8 +1,13 @@
 export type Message = {
   id: string;
   text: string;
+  user: string;
+  publickey: string;
   createdAt: number;
-  publicKey: string;
+  avatar: string;
+  isCurrentUser: boolean;
+  convoWith?: Contact;
+  time?: string;
 };
 
 export type Event = {

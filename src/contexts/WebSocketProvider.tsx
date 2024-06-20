@@ -3,7 +3,7 @@ import * as secp from '@noble/secp256k1';
 import { Input, bytesToHex } from '@noble/hashes/utils';
 
 import WebSocketContext from './WebSocketContext';
-import { RelayService } from '../RelayService';
+import { RelayService } from '../models/RelayService';
 import { NoPrivateKeyError } from '../errors';
 
 const WebSocketProvider = ({ children }) => {

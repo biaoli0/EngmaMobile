@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { generatePrivKey, getPubKey } from '../constants';
 import { saveKeysToLocal } from '../utils/saveKeysToLocal';
-import { KINDS, getRelayService, resetRelayService } from '../RelayService';
+import { KINDS, getRelayService, resetRelayService } from '../models/RelayService';
 
 const GenerateKeysScreen = ({ navigation }) => {
   const [privKey, setPrivKey] = useState('');

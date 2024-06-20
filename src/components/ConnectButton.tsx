@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { getRelayService } from '../RelayService';
+import { getRelayService } from '../models/RelayService';
 import { Contact } from '../types';
 
 const ConnectButton = ({ newContact }: { newContact: Contact }) => {
