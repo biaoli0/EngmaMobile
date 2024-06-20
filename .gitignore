@@ -64,4 +64,5 @@ yarn-error.log
 
 # testing
 /coverage
-android/app/
+android/app/build/
+android/app/src/main/
