@@ -1,25 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { getRelayService } from '../models/RelayService';
 import { Contact } from '../types';
+import { useContact } from '../hooks/useContact';
 
 const ContactListScreen = ({ navigation }) => {
-  const [friendList, setFriendList] = useState<Contact[]>([]);
-  useEffect(() => {
-    const getFollowList = async () => {
-      console.log('calling getFollowList()');
-      const relay = await getRelayService();
-
-      const newFriendList = await relay.fetchFriendList();
-      setFriendList(
-        Object.entries(newFriendList).map(([publicKey, { name }]) => {
-          return { publicKey, name };
-        }),
-      );
-    };
-
-    getFollowList();
-  }, []);
+  const { contacts } = useContact();
 
   const handlePress = (item: Contact) => () => {
     navigation.navigate('ConversationScreen', {
@@ -35,7 +20,7 @@ const ContactListScreen = ({ navigation }) => {
   );
 
   return (
-    <FlatList data={friendList} renderItem={renderItem} keyExtractor={(item) => item.publicKey} />
+    <FlatList data={contacts} renderItem={renderItem} keyExtractor={(item) => item.publicKey} />
   );
 };
 

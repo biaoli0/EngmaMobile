@@ -2,14 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Message as BaseMessage, Contact } from '../types';
 import { emptyMessage } from '../constants';
-import { KINDS, getRelayService } from '../models/RelayService';
+import { KINDS, useRelayService } from '../models/RelayService';
 import { Event } from 'nostr-tools';
+import { useContact } from '../hooks/useContact';
+import { useUser } from '../hooks/useUser';
 
 type Message = BaseMessage & { convoWith: Contact };
 
 const ChatsScreen = ({ navigation }) => {
   const [messages, setMessages] = useState<Record<string, Message>>({});
   const [newMessage, setNewMessage] = useState<Message>(emptyMessage);
+  const { contacts } = useContact();
+  const { getProfile } = useUser();
+
+  const RS = useRelayService();
 
   const chatItems = Object.entries(messages)
     .map(([, message]) => {
@@ -20,8 +26,8 @@ const ChatsScreen = ({ navigation }) => {
   useEffect(() => {
     if (newMessage.id !== emptyMessage.id) {
       if (
-        !messages[newMessage.publickey] ||
-        messages[newMessage.publickey].createdAt < newMessage.createdAt
+        !messages[newMessage.publicKey] ||
+        messages[newMessage.publicKey].createdAt < newMessage.createdAt
       ) {
         const newMessages = { ...messages, [newMessage.convoWith.publicKey]: newMessage };
         setMessages(newMessages);
@@ -29,56 +35,9 @@ const ChatsScreen = ({ navigation }) => {
     }
   }, [newMessage]);
 
-  useEffect(() => {
-    const getMessages = async () => {
-      console.log('calling getMessages()');
-      const relay = await getRelayService();
-      const myPubkey = relay.getPublicKey();
-      const { name: myName } = await relay.getUserProfile(myPubkey);
-      const friends = await relay.fetchFriendList();
-
-      const filters = Object.keys(friends)
-        .map((friendPubKey) => {
-          const filter1 = {
-            authors: [myPubkey],
-            kinds: [KINDS.DIRECT_MESSAGE],
-            '#p': [friendPubKey],
-          };
-          const filter2 = {
-            authors: [friendPubKey],
-            kinds: [KINDS.DIRECT_MESSAGE],
-            '#p': [myPubkey],
-          };
-          return [filter1, filter2];
-        })
-        .flat();
-
-      await relay.subscribeToEvent(filters, (event: Event) => {
-        const { content, id, created_at: createdAt, pubkey } = event || {};
-        const date = new Date(createdAt);
-        const formattedDate = date.toLocaleTimeString();
-
-        const newMessage: Message = {
-          id,
-          avatar: 'https://via.placeholder.com/40',
-          user: pubkey === myPubkey ? myName : friends[pubkey].name,
-          publickey: pubkey,
-          text: content,
-          createdAt,
-          isCurrentUser: pubkey === myPubkey,
-          time: formattedDate,
-          convoWith: { publicKey: pubkey, name: friends[pubkey].name },
-        };
-        setNewMessage(newMessage);
-      });
-    };
-
-    getMessages();
-  }, []);
-
   const handlePress = (item: Message) => () => {
     navigation.navigate('ConversationScreen', {
-      contact: { name: item.user, publicKey: item.publickey },
+      contact: { name: item.user, publicKey: item.publicKey },
     });
   };
 

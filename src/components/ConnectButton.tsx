@@ -1,31 +1,35 @@
 import React, { useEffect, useState } from 'react';
 
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { getRelayService } from '../models/RelayService';
+import { useRelayService } from '../models/RelayService';
 import { Contact } from '../types';
 
 const ConnectButton = ({ newContact }: { newContact: Contact }) => {
   const [status, setStatus] = useState('connect'); //pending, connected, connect
   const [myInvitationStatus, setMyInvitationStatus] = useState(false);
   const [theirInvitationStatus, setTheirInvitationStatus] = useState(false);
+  const RS = useRelayService();
 
   useEffect(() => {
     const loadInvitationStatuses = async () => {
       console.log('calling loadInvitationStatuses()');
-      const relay = await getRelayService();
 
-      const myFollowList = await relay.getUserFollowList(relay.getPublicKey());
+      const myFollowList = (await RS.getUserFollowList(RS.getPublicKey())).map(
+        (contact) => contact.publicKey,
+      );
       const newMyInvitationStatus = myFollowList.includes(newContact.publicKey);
 
-      const theirFollowList = await relay.getUserFollowList(newContact.publicKey);
-      const newTheirInvitationStatus = theirFollowList.includes(relay.getPublicKey());
+      const theirFollowList = (await RS.getUserFollowList(newContact.publicKey)).map(
+        (contact) => contact.publicKey,
+      );
+      const newTheirInvitationStatus = theirFollowList.includes(RS.getPublicKey());
 
       setMyInvitationStatus(newMyInvitationStatus);
       setTheirInvitationStatus(newTheirInvitationStatus);
     };
 
     loadInvitationStatuses();
-  }, [newContact.publicKey]);
+  }, [newContact.publicKey, RS]);
 
   useEffect(() => {
     console.log('myInvitationStatus', myInvitationStatus);
@@ -46,13 +50,11 @@ const ConnectButton = ({ newContact }: { newContact: Contact }) => {
 
   const handlePress = async () => {
     if (status === 'connect') {
-      const relay = await getRelayService();
-      await relay.addUserToFollowList(newContact);
+      await RS.addUserToFollowList(newContact);
       setMyInvitationStatus(true);
     }
     if (status === 'pending') {
-      const relay = await getRelayService();
-      await relay.removeUserFromFollowList(newContact);
+      await RS.removeUserFromFollowList(newContact);
       setMyInvitationStatus(false);
     }
   };

@@ -2,16 +2,15 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { generatePrivKey, getPubKey } from '../constants';
-import { saveKeysToLocal } from '../utils/saveKeysToLocal';
-import { KINDS, getRelayService, resetRelayService } from '../models/RelayService';
+import { useUser } from '../hooks/useUser';
 
 const GenerateKeysScreen = ({ navigation }) => {
+  const { saveNewUser, updateProfile } = useUser();
   const [privKey, setPrivKey] = useState('');
   const [publicKey, setPublicKey] = useState('');
 
-  const updateProfile = async () => {
-    const relay = await getRelayService();
-    await relay.updateProfile(publicKey.substring(0, 6));
+  const updateProfileName = async () => {
+    await updateProfile(publicKey.substring(0, 6));
   };
 
   useEffect(() => {
@@ -20,9 +19,7 @@ const GenerateKeysScreen = ({ navigation }) => {
       try {
         const newPrivKey = await generatePrivKey();
         const newPublicKey = await getPubKey(newPrivKey);
-        await saveKeysToLocal(newPrivKey, newPublicKey);
-        console.log('  ');
-        console.log('saved keys to local');
+        saveNewUser(newPrivKey, newPublicKey);
         setPrivKey(newPrivKey);
         setPublicKey(newPublicKey);
       } catch (error) {
@@ -52,8 +49,7 @@ const GenerateKeysScreen = ({ navigation }) => {
       </TouchableOpacity>
       <TouchableOpacity
         onPress={async () => {
-          await resetRelayService();
-          await updateProfile();
+          await updateProfileName();
           navigation.navigate('MainScreen');
         }}
         style={styles.keyContainer}

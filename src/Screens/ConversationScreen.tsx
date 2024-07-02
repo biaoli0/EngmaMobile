@@ -4,10 +4,11 @@ import { BackHandler, StyleSheet, Text, TextInput, TouchableOpacity, View } from
 
 import { Contact, Message } from '../types';
 import Messages from '../Messages';
-import { KINDS, getRelayService } from '../models/RelayService';
+import { KINDS, useRelayService } from '../models/RelayService';
 import { Event, Subscription } from 'nostr-tools';
 import { emptyMessage } from '../constants';
 import { useFocusEffect } from '@react-navigation/native';
+import { useUser } from '../hooks/useUser';
 
 type Route = {
   params: { contact: Contact };
@@ -19,6 +20,8 @@ const ConversationScreen = ({ route, navigation }: { route: Route }) => {
   const [newMessage, setNewMessage] = useState<Message>(emptyMessage);
   const [sub, setSub] = useState<Subscription>();
   const [text, setText] = React.useState('');
+  const { getProfile } = useUser();
+  const RS = useRelayService();
   const { contact } = route.params;
 
   useFocusEffect(
@@ -49,9 +52,8 @@ const ConversationScreen = ({ route, navigation }: { route: Route }) => {
   useEffect(() => {
     const getMessages = async () => {
       console.log('calling getMessages()');
-      const relay = await getRelayService();
-      const myPubkey = relay.getPublicKey();
-      const { name: myName } = await relay.getUserProfile(myPubkey);
+      const myPubkey = RS.getPublicKey();
+      const { name: myName } = await getProfile(myPubkey);
 
       if (myPubkey && contact && contact.publicKey) {
         console.log('contact: ', route.params.contact);
@@ -67,7 +69,7 @@ const ConversationScreen = ({ route, navigation }: { route: Route }) => {
           '#p': [myPubkey],
         };
 
-        const sub = await relay.subscribeToEvent([filter1, filter2], (event: Event) => {
+        const sub = await RS.subscribeToEvent([filter1, filter2], (event: Event) => {
           const { content, id, created_at: createdAt, pubkey } = event || {};
           const newMessage: Message = {
             id,
@@ -76,7 +78,7 @@ const ConversationScreen = ({ route, navigation }: { route: Route }) => {
             avatar: 'https://via.placeholder.com/40',
             isCurrentUser: pubkey === myPubkey,
             user: pubkey === myPubkey ? myName : contact.name,
-            publickey: pubkey,
+            publicKey: pubkey,
           };
           setNewMessage(newMessage);
         });
@@ -92,8 +94,8 @@ const ConversationScreen = ({ route, navigation }: { route: Route }) => {
     // Send message to the relay
     console.log('Sending message:', text);
     console.log('receiver:', contact);
-    const relay = await getRelayService();
-    await relay.sendMessageTo(contact.publicKey, text);
+
+    await RS.sendMessageTo(contact.publicKey, text);
     setText('');
   };
 

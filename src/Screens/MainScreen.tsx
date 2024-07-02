@@ -3,10 +3,19 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ContactListScreen from './ContactListScreen';
 import ChatsScreen from './ChatsScreen';
+import { useContact } from '../hooks/useContact';
+import LoadingScreen from './LoadingScreen';
 
 const Tab = createBottomTabNavigator();
 
 const MainScreen = () => {
+  // preloading contacts
+  const { loading } = useContact();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({

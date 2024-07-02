@@ -1,8 +1,11 @@
 import { Event, Filter, Relay, Subscription } from 'nostr-tools';
 import { v2 } from '../utils/encryption';
 import { getSignedEvent } from '../utils/getSignedEvent';
-import { getLocalPrivKey, getPubKey } from '../constants';
 import { FriendOrFollowList, Contact } from '../types';
+import { useQuery } from '@realm/react';
+import { User } from './User';
+import { useEffect, useState } from 'react';
+import { Results } from 'realm';
 
 const relayUrl = 'wss://relay.damus.io';
 // const relayUrl = 'wss://relay.nostrassets.com';
@@ -13,58 +16,55 @@ export const KINDS = {
   DIRECT_MESSAGE: 4,
 };
 
-let relayService: RelayService | null;
+export const useRelayService = () => {
+  const users = useQuery(User);
+  const initializeRelayService = (users: Results<User>) => {
+    const user = users[0];
 
-const relayConnect = async (): Promise<Relay> => {
-  if (!RelayService.relay || !RelayService.relay?.connected) {
-    console.log('connecting relay');
-    try {
-      return Relay.connect(relayUrl);
-    } catch (e) {
-      throw new Error('Error on connecting to relay');
-    }
-  }
+    const privateKey = user.privateKey;
+    const publicKey = user.publicKey;
 
-  return RelayService.relay;
-};
+    return new RelayService(privateKey, publicKey);
+  };
+  const [relayService, setRelayService] = useState<RelayService>(initializeRelayService(users));
 
-export const resetRelayService = async () => {
-  console.log('resetting relay service');
-  const relay = await relayConnect();
-  const privateKey = await getLocalPrivKey();
-  const publicKey = getPubKey(privateKey);
-
-  relayService = new RelayService(privateKey, publicKey, relay);
-  // await relayService.getUserProfile(publicKey);
-
-  return relayService;
-};
-
-export const getRelayService = async (): Promise<RelayService> => {
-  console.log('initializing relay service');
-
-  if (!relayService) {
-    console.log('reset relay service');
-    return resetRelayService();
-  }
+  useEffect(() => {
+    const newRS = initializeRelayService(users);
+    setRelayService(newRS);
+  }, [users]);
 
   return relayService;
 };
 
 export class RelayService {
-  static relay: Relay;
+  private relay: Relay | null = null;
   private privateKey: string;
   private publicKey: string;
   private subNum: number;
-  private followList: FriendOrFollowList = {};
   // private cachedEvents: Record<string, Event>;
 
-  constructor(privateKey: string, publicKey: string, relay: Relay) {
-    RelayService.relay = relay;
+  constructor(privateKey: string, publicKey: string) {
     this.privateKey = privateKey;
     this.publicKey = publicKey;
     this.subNum = 0;
   }
+
+  private getRelay = async () => {
+    if (this.relay && this.relay.connected) {
+      return this.relay;
+    }
+
+    console.log('connecting');
+    try {
+      this.relay = await Relay.connect(relayUrl);
+    } catch (e) {
+      throw new Error('Error on connecting to relay');
+    }
+
+    console.log('connected');
+
+    return this.relay;
+  };
 
   public getPublicKey() {
     return this.publicKey;
@@ -75,7 +75,7 @@ export class RelayService {
     await this.publishEvent('profile', KINDS.PROFILE, [['name', newName]]);
   }
 
-  async fetchFriendList() {
+  public async fetchContacts() {
     const filterForFollowList = {
       authors: [this.publicKey],
       kinds: [KINDS.FOLLOW_LIST],
@@ -97,7 +97,7 @@ export class RelayService {
 
     const events = await this.fetch(filters);
 
-    const friendList: Record<string, { name: string }> = {};
+    const contacts: Record<string, { name: string }> = {};
 
     for (const e of events) {
       const { pubkey: friendPubkey, tags } = e || {};
@@ -109,14 +109,14 @@ export class RelayService {
         const [, pubKey, , name] = tag;
         if (pubKey === this.publicKey) {
           const profile = await this.getUserProfile(friendPubkey);
-          friendList[friendPubkey] = profile;
+          contacts[friendPubkey] = profile;
           break;
         }
       }
     }
 
-    console.log('friendList', friendList);
-    return friendList;
+    console.log('contacts: ', contacts);
+    return contacts;
   }
 
   // subscribe to the real time profile
@@ -130,37 +130,37 @@ export class RelayService {
   }
 
   // subscribe to the real time follow list
-  async getUserFollowList(publicKey: string) {
+  public async getUserFollowList(publicKey: string) {
     const filter = { authors: [publicKey], kinds: [KINDS.FOLLOW_LIST], limit: 1 };
     console.log('getUserFollowList() with filter: ', filter);
     const events = await this.fetch([filter]);
     const { tags } = events[0];
-    return tags.map((tag) => tag[1]);
+    return tags.map((tag) => ({ publicKey: tag[1], name: tag[3] }));
   }
 
-  async addUserToFollowList(newContact: Contact) {
-    this.followList[newContact.publicKey] = { name: newContact.name };
-    const tags = this.getFollowListAsTags(this.followList);
-
-    await this.publishEvent('follow list', KINDS.FOLLOW_LIST, tags);
-  }
-
-  getFollowListAsTags(followList: FriendOrFollowList) {
+  private getFollowListAsTags(followList: Contact[]) {
     return Object.entries(followList).map(([publicKey, { name }]) => {
       return ['p', publicKey, relayUrl, name];
     });
   }
 
-  async removeUserFromFollowList(newContact: Contact) {
-    delete this.followList[newContact.publicKey];
-    const tags = Object.entries(this.followList).map(([publicKey, { name }]) => {
-      return ['p', publicKey, relayUrl, name];
-    });
+  public async addUserToFollowList(newContact: Contact) {
+    const myFollowList = await this.getUserFollowList(this.publicKey);
+    myFollowList.push({ name: newContact.name, publicKey: newContact.publicKey });
+    const tags = this.getFollowListAsTags(myFollowList);
 
     await this.publishEvent('follow list', KINDS.FOLLOW_LIST, tags);
   }
 
-  async fetch(filters: Filter[]): Promise<Event[]> {
+  public async removeUserFromFollowList(newContact: Contact) {
+    const myFollowList = await this.getUserFollowList(newContact.publicKey);
+    myFollowList.filter((contact) => contact.publicKey !== newContact.publicKey);
+    const tags = this.getFollowListAsTags(myFollowList);
+
+    await this.publishEvent('follow list', KINDS.FOLLOW_LIST, tags);
+  }
+
+  private async fetch(filters: Filter[]): Promise<Event[]> {
     const events: Event[] = [];
     const promises: Promise<void>[] = [];
     const subs: Promise<Subscription>[] = [];
@@ -190,33 +190,27 @@ export class RelayService {
     return events;
   }
 
-  async subscribeToEvent(filters: Filter[], onChange: (params?: any) => void = () => ({})) {
+  public async subscribeToEvent(filters: Filter[], onChange: (params?: any) => void = () => ({})) {
     this.subNum++;
-    console.log('subNum: ', this.subNum);
-    try {
-      if (!RelayService.relay || !RelayService.relay.connected) {
-        RelayService.relay = await relayConnect();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    // console.log('subNum: ', this.subNum);
+    const relay = await this.getRelay();
 
-    const subscription = RelayService.relay.subscribe(filters, {
+    const subscription = relay.subscribe(filters, {
       onevent: async (event: Event) => {
         const { kind, content: encryptedContent, id, tags, pubkey } = event || {};
 
         if (kind === KINDS.DIRECT_MESSAGE) {
-          console.log('receiving event:', {
-            pubkey: `${event.pubkey.substring(0, 5)}#####`,
-            tags: event.tags,
-          });
+          // console.log('receiving event:', {
+          //   pubkey: `${event.pubkey.substring(0, 5)}#####`,
+          //   tags: event.tags,
+          // });
 
           const conversationKey =
             pubkey === this.publicKey
               ? await v2.utils.getConversationKey(this.privateKey, tags[0][1]) // sent message
               : await v2.utils.getConversationKey(this.privateKey, pubkey); // received message
           const content = v2.decrypt(encryptedContent, conversationKey);
-          console.log('content: ', content);
+
           onChange({ ...event, content });
         } else {
           onChange(event);
@@ -226,7 +220,7 @@ export class RelayService {
       },
       onclose: () => {
         this.subNum--;
-        console.log('subNum--: ', this.subNum);
+        // console.log('subNum--: ', this.subNum);
         return;
       },
       eoseTimeout: 9999999,
@@ -235,12 +229,13 @@ export class RelayService {
     return subscription;
   }
 
-  async sendMessageTo(receiverPubKey: string, text: string) {
+  // working on
+  public async sendMessageTo(receiverPubKey: string, text: string) {
     const tags = [['p', receiverPubKey]];
     await this.publishEvent(text, KINDS.DIRECT_MESSAGE, tags);
   }
 
-  async publishEvent(text: string, kind: number, tags: string[][] = []) {
+  private async publishEvent(text: string, kind: number, tags: string[][] = []) {
     const conversationKey = await v2.utils.getConversationKey(this.privateKey, tags[0][1]);
     const content = v2.encrypt(text, conversationKey);
 
@@ -256,18 +251,16 @@ export class RelayService {
     console.log('signedEvent:', signedEvent);
 
     try {
-      if (!RelayService.relay || !RelayService.relay.connected) {
-        await relayConnect();
-      }
-      await RelayService.relay.publish(signedEvent);
+      const relay = await this.getRelay();
+      relay.publish(signedEvent);
     } catch (e) {
       console.error(e);
     }
   }
 
   unsubscribe() {
-    if (RelayService.relay) {
-      RelayService.relay.close();
+    if (this.relay) {
+      this.relay.close();
       console.log('Disconnected from relay.');
     }
   }

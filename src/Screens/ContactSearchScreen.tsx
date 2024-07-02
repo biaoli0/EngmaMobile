@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { View, TextInput, FlatList, StyleSheet } from 'react-native';
-import { getRelayService } from '../models/RelayService';
 import NewContactPanel from '../components/NewContactPanel';
+import { useUser } from '../hooks/useUser';
 
 const ContactSearchScreen = () => {
   const [query, setQuery] = useState('');
   const [filteredContacts, setFilteredContacts] = useState([]);
+  const { getProfile } = useUser();
 
   const handleSearch = async (text) => {
     setQuery(text);
     const trimmedText = text.trim();
     if (trimmedText && trimmedText.length === 64) {
-      const relay = await getRelayService();
-      const { name } = await relay.getUserProfile(trimmedText);
+      try {
+        const { name } = await getProfile(trimmedText);
+        setFilteredContacts([{ id: 1, name, publicKey: trimmedText }]);
+      } catch (e) {
+        console.error(e);
+      }
 
-      setFilteredContacts([{ id: 1, name, publicKey: trimmedText }]);
       //   const profileName = await subscription.onevent();
       //   setFilteredContacts(filteredData);
     } else {

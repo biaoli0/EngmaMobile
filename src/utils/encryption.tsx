@@ -120,7 +120,6 @@ function decrypt(payload: string, conversationKey: Uint8Array): string {
   const { chacha_key, chacha_nonce, hmac_key } = u.getMessageKeys(conversationKey, nonce);
   const calculatedMac = u.hmacAad(hmac_key, ciphertext, nonce);
   if (!equalBytes(calculatedMac, mac)) {
-    console.error('invalid Mac');
     throw new Error('invalid MAC');
   }
   const padded = chacha20(chacha_key, chacha_nonce, ciphertext);

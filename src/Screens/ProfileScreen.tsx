@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { getRelayService } from '../models/RelayService';
+import { useRelayService } from '../models/RelayService';
+import { useUser } from '../hooks/useUser';
 
 const ProfileScreen = () => {
   const [name, setName] = useState('');
+  const RS = useRelayService();
+  const { getProfile, updateProfile } = useUser();
 
   const handleSubmit = async () => {
-    const relay = await getRelayService();
-    await relay.updateProfile(name);
+    await updateProfile(name);
   };
 
   useEffect(() => {
     const fetchData = async () => {
       console.log('calling fetchData() in ProfileScreen');
-      const relay = await getRelayService();
-      const { name } = await relay.getUserProfile(relay.getPublicKey());
+      const { name = 'Please enter your new profile name' } = await getProfile(RS.getPublicKey());
       setName(name);
     };
 

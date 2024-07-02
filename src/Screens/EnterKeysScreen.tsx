@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { saveKeysToLocal } from '../utils/saveKeysToLocal';
-import { resetRelayService } from '../models/RelayService';
+import { View, Text, TextInput, Button, StyleSheet, Platform } from 'react-native';
+import { useUser } from '../hooks/useUser';
 
 const EnterKeysScreen = ({ navigation }) => {
+  const { saveNewUser } = useUser();
+
   const [publicKey, setPublicKey] = useState(
-    'f22e82ed12d562fa35906c93f36e664d27a1be1426ad7f23c1a9595996bc6c2c',
+    Platform.OS === 'ios'
+      ? 'f22e82ed12d562fa35906c93f36e664d27a1be1426ad7f23c1a9595996bc6c2c'
+      : '51fabec863db0f9364ba97ea9855f232272fc2a444bd60a913574a03a8d07301',
   );
   const [privateKey, setPrivateKey] = useState(
-    'cdaa3c71fea383ef59e4d36b78f6d6c98c2f468b5e87665533967ab7c28d84d1',
+    Platform.OS === 'ios'
+      ? 'cdaa3c71fea383ef59e4d36b78f6d6c98c2f468b5e87665533967ab7c28d84d1'
+      : '41e5b5eef71a082849a5946956602e52d52b96bf227053d7e39ee3d45edb7e38',
   );
 
   const handleSubmit = async () => {
-    await saveKeysToLocal(privateKey, publicKey);
-    await resetRelayService();
+    saveNewUser(privateKey, publicKey);
     navigation.navigate('MainScreen');
   };
 

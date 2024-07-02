@@ -1,5 +1,4 @@
 import 'text-encoding-polyfill';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as secp from '@noble/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 // https://github.com/paulmillr/noble-secp256k1
@@ -7,22 +6,10 @@ import { bytesToHex } from '@noble/hashes/utils';
 import 'react-native-get-random-values';
 import { hmac } from '@noble/hashes/hmac';
 import { sha256 } from '@noble/hashes/sha256';
-import { v2 } from './utils/encryption';
-import { NoPrivateKeyError } from './errors';
+
 const hmacSha256Sync = (k: Input, ...m: any[]) => hmac(sha256, k, secp.etc.concatBytes(...m));
 secp.etc.hmacSha256Sync = hmacSha256Sync;
 secp.etc.hmacSha256Async = (k, ...m) => Promise.resolve(hmacSha256Sync(k, ...m));
-
-// export const privKey = bytesToHex(secp.utils.randomPrivateKey());
-// export const privKey = 'd90ad8a8df94ce08ff585d54bf74d5cab44924bfb945593f261b561558410c06';
-
-export const getLocalPrivKey = async () => {
-  const privKey = await AsyncStorage.getItem('private-key');
-  if (!privKey) {
-    throw new NoPrivateKeyError('No private-key found on local');
-  }
-  return privKey;
-};
 
 export const generatePrivKey = () => {
   const privKey = bytesToHex(secp.utils.randomPrivateKey());
